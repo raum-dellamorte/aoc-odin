@@ -60,7 +60,7 @@ day09 :: proc() {
     WIN: rl.Vector2 = {1280, 720}
     // RLNK : rl.Vector2 = { 50, 50 }
     RLNK: rl.Vector3 = {1, 1, 1}
-    SPEED: f32 = 40
+    SPEED: f32 = 200
     rl.InitWindow(i32(WIN.x), i32(WIN.y), "Day 09: Rope Bridge")
 
     rlnk: rl.Vector3 = {0, 0, 0}
@@ -240,11 +240,7 @@ day09 :: proc() {
         rl.DrawMeshInstanced(cube.meshes[0], cube.materials[0], raw_data(visited_mat4), i32(len(visited_mat4)))
         
         // if len(visited_mat4) == 10 { // Sanity check. Mat4s print as intended
-<<<<<<< HEAD
         //   for i in 0..len(visited_mat4) {
-=======
-        //   for i in 0..<len(visited_mat4) {
->>>>>>> fe99d6e (Comments and println test)
         //     test := raw_data(visited_mat4)[i]
         //     println("mat4",test)
         //   }
