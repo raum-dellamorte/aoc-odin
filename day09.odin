@@ -86,7 +86,24 @@ day09 :: proc() {
     visited2 := make([dynamic]Loc, 0, num_mov)
     defer delete(visited2)
     append(&visited2, Loc{0, 0})
-
+    
+    DrawMe :: enum {
+      None,
+      First,
+      Last,
+      Both,
+    }
+    DrawMeSOA :: struct {
+      loc: Loc,
+      draw_me: DrawMe,
+      pos: rl.Vector3,
+    }
+    visited_draw : #soa[dynamic]DrawMeSOA
+    visited_draw = make_soa(#soa[dynamic]DrawMeSOA, 0, num_mov * num_mov)
+    defer delete_soa(visited_draw)
+    visited_mat4 := make([dynamic] #row_major matrix[4, 4]f32, 0, num_mov * num_mov)
+    defer delete(visited_mat4)
+    
     mov := Moves.ErrDir
     dist := 0
     rope: [10]RopeLink = {}
@@ -179,24 +196,46 @@ day09 :: proc() {
         // Instancing is not available for built in spheres and cubes...
         // Gotta do it the hard way.
         // ---
-        // boundL := camera.position.x - (WIN.x / 2.0) - 2.0
-        // boundR := boundL + WIN.x + 4.0
-        // boundD := camera.position.y - (WIN.y / 2.0) - 2.0
-        // boundU := boundD + WIN.y + 4.0
-        // for pnt in rope[1].visited {
-        //   x := f32(pnt.x)
-        //   y := f32(pnt.y)
-        //   if !(x < boundL || x > boundR || y > boundU || y < boundD) {
-        //     rl.DrawSphere(rl.Vector3{x,y,0}, 0.25, rl.DARKBLUE)
-        //   }
-        // }
-        // for pnt in rope[9].visited {
-        //   x := f32(pnt.x)
-        //   y := f32(pnt.y)
-        //   if !(x < boundL || x > boundR || y > boundU || y < boundD) {
-        //     rl.DrawSphere(rl.Vector3{x,y,0}, 0.25, rl.GOLD)
-        //   }
-        // }
+        boundL := camera.position.x - (WIN.x / 2.0) - 2.0
+        boundR := boundL + WIN.x + 4.0
+        boundD := camera.position.y - (WIN.y / 2.0) - 2.0
+        boundU := boundD + WIN.y + 4.0
+        
+        clear_soa(&visited_draw)
+        clear(&visited_mat4)
+        for pnt in rope[1].visited {
+          x := f32(pnt.x)
+          y := f32(pnt.y)
+          if !(x < boundL || x > boundR || y > boundU || y < boundD) {
+            append_soa(&visited_draw, DrawMeSOA { pnt, DrawMe.First, rl.Vector3{x,y,0} })
+          }
+        }
+        for pnt in rope[9].visited {
+          x := f32(pnt.x)
+          y := f32(pnt.y)
+          if !(x < boundL || x > boundR || y > boundU || y < boundD) {
+            found := false
+            for &visd in visited_draw {
+              if visd.loc != pnt { continue }
+              visd.draw_me = DrawMe.Both
+              found = true
+              break
+            }
+            if !found { append_soa(&visited_draw, DrawMeSOA { pnt, DrawMe.Last, rl.Vector3{x,y,0} }) }
+          }
+        }
+        for &visd in visited_draw {
+          transform := IDENT_MAT
+          // I don't remember how to apply a position to a matrix
+          // but I think this is right. FIXME
+          transform[3, 0] = visd.pos.x
+          transform[3, 1] = visd.pos.y
+          transform[3, 2] = visd.pos.z
+          append(&visited_mat4, transform)
+        }
+        // Compiles, runs, draws nothing. 
+        rl.DrawMeshInstanced(cube.meshes[0], cube.materials[0], raw_data(visited_mat4), i32(len(visited_mat4)))
+        
         for i := 9; i >= 0; i -= 1 {
           r_to := loc_vec(rope_anim[i].link.loc)
           tdist := linalg.distance(rope_anim[i].anim, r_to)
