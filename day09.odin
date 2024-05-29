@@ -190,12 +190,12 @@ day09 :: proc() {
       if loop_state == 1 {
         // animate rope pieces moving
 
-        // This, under ---, works but it's slow and I assume it's too many draw calls
+        // Trying out instancing. I assume what I have so far is not working
+        // bc it needs a shader and all that garbage.
         // DrawMeshInstanced :: proc "c" (
         //   mesh: Mesh, material: Material, transforms: [^]matrix[4, 4]f32, instances: i32)
-        // Instancing is not available for built in spheres and cubes...
-        // Gotta do it the hard way.
-        // ---
+        
+        // Screen bounds
         boundL := camera.position.x - (WIN.x / 2.0) - 2.0
         boundR := boundL + WIN.x + 4.0
         boundD := camera.position.y - (WIN.y / 2.0) - 2.0
@@ -227,14 +227,28 @@ day09 :: proc() {
         for &visd in visited_draw {
           transform := IDENT_MAT
           // I don't remember how to apply a position to a matrix
-          // but I think this is right. FIXME
+          // but I think this is right. FIXME maybe
           transform[3, 0] = visd.pos.x
           transform[3, 1] = visd.pos.y
           transform[3, 2] = visd.pos.z
           append(&visited_mat4, transform)
         }
+        // for i in 0..<len(visited_mat4) {
+        //   if visited_mat4[i] == 0 { ordered_remove(&visited_mat4, i) }
+        // }
         // Compiles, runs, draws nothing. 
         rl.DrawMeshInstanced(cube.meshes[0], cube.materials[0], raw_data(visited_mat4), i32(len(visited_mat4)))
+        
+        // if len(visited_mat4) == 10 { // Sanity check. Mat4s print as intended
+<<<<<<< HEAD
+        //   for i in 0..len(visited_mat4) {
+=======
+        //   for i in 0..<len(visited_mat4) {
+>>>>>>> fe99d6e (Comments and println test)
+        //     test := raw_data(visited_mat4)[i]
+        //     println("mat4",test)
+        //   }
+        // }
         
         for i := 9; i >= 0; i -= 1 {
           r_to := loc_vec(rope_anim[i].link.loc)
