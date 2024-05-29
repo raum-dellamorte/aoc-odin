@@ -60,14 +60,15 @@ day09 :: proc() {
     WIN: rl.Vector2 = {1280, 720}
     // RLNK : rl.Vector2 = { 50, 50 }
     RLNK: rl.Vector3 = {1, 1, 1}
-    SPEED: f32 = 200
+    SPEED: f32 = 40
+    ROPE_SPEED: f32 = 10
     rl.InitWindow(i32(WIN.x), i32(WIN.y), "Day 09: Rope Bridge")
 
     rlnk: rl.Vector3 = {0, 0, 0}
     // offset : rl.Vector2 = { 0, 0 }
     // win_offset : rl.Vector2 = WIN / 2.0
-    distps: f32 = 0
-
+    dist_player: f32 = 0
+    
     // HEAD: = "🐙"
     // LINK: = "🐠"
     // LNK1: = "🦑"
@@ -152,6 +153,7 @@ day09 :: proc() {
 
     inst_num := 0
     loop_state := 0
+    dist_current := 0
     mov_line := movements[0]
 
     // printf("{}",)
@@ -163,7 +165,7 @@ day09 :: proc() {
       //   // print("-Slow:%.02v-",frametime)
       //   continue
       // }
-      distps = frametime * SPEED
+      dist_player = frametime * SPEED
 
       if loop_state == 0 {
         // initialize rope movement
@@ -175,12 +177,15 @@ day09 :: proc() {
           println("Error parsing distance:", mov)
         }
         move_rope(&rope, mov, dist)
+        dist_current = dist
         loop_state += 1
       }
-      if rl.IsKeyDown(.W) || rl.IsKeyDown(.UP) {rlnk.y += distps}
-      if rl.IsKeyDown(.S) || rl.IsKeyDown(.DOWN) {rlnk.y -= distps}
-      if rl.IsKeyDown(.A) || rl.IsKeyDown(.LEFT) {rlnk.x -= distps}
-      if rl.IsKeyDown(.D) || rl.IsKeyDown(.RIGHT) {rlnk.x += distps}
+      
+      // Move "Player"
+      if rl.IsKeyDown(.W) || rl.IsKeyDown(.UP) {rlnk.y += dist_player}
+      if rl.IsKeyDown(.S) || rl.IsKeyDown(.DOWN) {rlnk.y -= dist_player}
+      if rl.IsKeyDown(.A) || rl.IsKeyDown(.LEFT) {rlnk.x -= dist_player}
+      if rl.IsKeyDown(.D) || rl.IsKeyDown(.RIGHT) {rlnk.x += dist_player}
       // offset = (WIN / 2.0) - (RLNK / 2.0) + rlnk
       move_cam(&camera, &rlnk)
 
@@ -255,7 +260,7 @@ day09 :: proc() {
             rope_anim[i].anim = r_to
             rope_anim[i].prev = r_to
           } else {
-            rope_anim[i].step += f32(4) * frametime
+            rope_anim[i].step += (f32(ROPE_SPEED) / f32(dist_current)) * frametime
             rope_anim[i].anim = linalg.lerp(
               rope_anim[i].prev,
               r_to,
