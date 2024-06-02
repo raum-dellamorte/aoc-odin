@@ -185,8 +185,9 @@ day09 :: proc() {
       move_cam(&camera, &rlnk)
       
       rl.BeginDrawing()
-      rl.BeginMode3D(camera)
       rl.ClearBackground(rl.BLUE)
+      rl.BeginMode3D(camera)
+      rl.rlPushMatrix()  // I don't yet understand this, just trying it
       
       view_mat := rl.GetCameraMatrix(camera)
       
@@ -234,11 +235,9 @@ day09 :: proc() {
         //   if visited_mat4[i] == 0 { ordered_remove(&visited_mat4, i) }
         // }
         // Compiles, runs, draws nothing. 
-        // rl.rlPushMatrix()  // I don't yet understand this, just trying it
         rl.BeginShaderMode(rope_trail_shader)
         rl.DrawMeshInstanced(cube.meshes[0], cube.materials[0], raw_data(visited_mat4), i32(len(visited_mat4)))
         rl.EndShaderMode()
-        // rl.rlPopMatrix()
         
         // if len(visited_mat4) == 10 { // Sanity check. Mat4s print as intended
         //   for i in 0..<len(visited_mat4) {
@@ -301,6 +300,7 @@ day09 :: proc() {
       }
       // rl.DrawCubeV(rlnk, RLNK, rl.RED)
       rl.DrawMesh(cube.meshes[0], cube.materials[0], rl.Matrix(linalg.MATRIX4F32_IDENTITY))
+      rl.rlPopMatrix() // Pushing after Begin and Popping before End, makes sense? Must read docs ... which are for C, slight differences...
       rl.EndMode3D()
       rl.EndDrawing()
     }
