@@ -8,13 +8,6 @@ import "core:strings"
 
 import rl "vendor:raylib"
 
-IDENT_MAT :: #row_major matrix[4,4]f32{
-  1.0,0.0,0.0,0.0,
-  0.0,1.0,0.0,0.0,
-  0.0,0.0,1.0,0.0,
-  0.0,0.0,0.0,1.0,
-}
-
 day09 :: proc() {
   // {
   //   println("Day 09: Rope Bridge\n")
@@ -57,7 +50,7 @@ day09 :: proc() {
     ROPE_SPEED: f32 = 10
     // Init Window BEFORE other Raylib operations like importing models and shaders
     rl.InitWindow(i32(WIN.x), i32(WIN.y), "Day 09: Rope Bridge")
-
+    
     rlnk: rl.Vector3 = {0, 0, 0}
     // offset : rl.Vector2 = { 0, 0 }
     // win_offset : rl.Vector2 = WIN / 2.0
@@ -69,15 +62,15 @@ day09 :: proc() {
     // LNK9: = "🦑"
     // VIS1: = "🖤"
     // VIS9: = "💦"
-
+    
     input_file := #load("day09-input", string)
     movements := strings.split(strings.trim_space(input_file), "\n")
     num_mov := len(movements)
-
+    
     visited := make([dynamic]Loc, 0, num_mov)
     defer delete(visited)
     append(&visited, Loc{0, 0})
-
+    
     visited2 := make([dynamic]Loc, 0, num_mov)
     defer delete(visited2)
     append(&visited2, Loc{0, 0})
@@ -109,7 +102,15 @@ day09 :: proc() {
     }
     rope[1].visited = &visited
     rope[9].visited = &visited2
-
+    
+    // Shaders
+    rope_trail_shader := rl.LoadShader("res/shaders/rope_trail_instanced.vs", "res/shaders/rope_trail_instanced.fs")
+    // defer rl.UnloadShader(rope_trail_shader) // This Segfaults. Turns out it's automatic.
+    rope_trail_shader.locs[rl.ShaderLocationIndex.MATRIX_MVP] = i32(rl.GetShaderLocation(rope_trail_shader, "mvp"));
+    rope_trail_shader.locs[rl.ShaderLocationIndex.MATRIX_MODEL] = i32(rl.GetShaderLocationAttrib(rope_trail_shader, "instance"));
+    rope_trail_shader.locs[rl.ShaderLocationIndex.MATRIX_VIEW] = i32(rl.GetShaderLocation(rope_trail_shader, "view"));
+    rope_trail_shader.locs[rl.ShaderLocationIndex.MATRIX_PROJECTION] = i32(rl.GetShaderLocation(rope_trail_shader, "projection"));
+    
     // Meshes and Textures
     cube := rl.LoadModel("cube-1x1x1.obj")
     // textures := []
@@ -144,14 +145,14 @@ day09 :: proc() {
       camera.target.x = target^.x
       camera.target.y = target^.y
     }
-
+    
     inst_num := 0
     loop_state := 0
     dist_current := 0
     mov_line := movements[0]
-
+    
     // printf("{}",)
-
+    
     frametime: f32 = f32(1.0 / 60.0)
     for !rl.WindowShouldClose() {
       frametime = rl.GetFrameTime()
@@ -160,7 +161,7 @@ day09 :: proc() {
       //   continue
       // }
       dist_player = frametime * SPEED
-
+      
       if loop_state == 0 {
         // initialize rope movement
         mov, dist = get_mov(mov_line)
@@ -182,13 +183,16 @@ day09 :: proc() {
       if rl.IsKeyDown(.D) || rl.IsKeyDown(.RIGHT) {rlnk.x += dist_player}
       // offset = (WIN / 2.0) - (RLNK / 2.0) + rlnk
       move_cam(&camera, &rlnk)
-
+      
       rl.BeginDrawing()
       rl.BeginMode3D(camera)
       rl.ClearBackground(rl.BLUE)
+      
+      view_mat := rl.GetCameraMatrix(camera)
+      
       if loop_state == 1 {
         // animate rope pieces moving
-
+        
         // Trying out instancing. I assume what I have so far is not working
         // bc it needs a shader and all that garbage.
         // DrawMeshInstanced :: proc "c" (
@@ -224,19 +228,17 @@ day09 :: proc() {
           }
         }
         for &visd in visited_draw {
-          transform := IDENT_MAT
-          // I don't remember how to apply a position to a matrix
-          // but I think this is right. FIXME maybe
-          transform[3, 0] = visd.pos.x
-          transform[3, 1] = visd.pos.y
-          transform[3, 2] = visd.pos.z
-          append(&visited_mat4, transform)
+          append(&visited_mat4, view_mat * rl.MatrixTranslate(visd.pos.x,visd.pos.y,visd.pos.z))
         }
         // for i in 0..<len(visited_mat4) {
         //   if visited_mat4[i] == 0 { ordered_remove(&visited_mat4, i) }
         // }
         // Compiles, runs, draws nothing. 
+        // rl.rlPushMatrix()  // I don't yet understand this, just trying it
+        rl.BeginShaderMode(rope_trail_shader)
         rl.DrawMeshInstanced(cube.meshes[0], cube.materials[0], raw_data(visited_mat4), i32(len(visited_mat4)))
+        rl.EndShaderMode()
+        // rl.rlPopMatrix()
         
         // if len(visited_mat4) == 10 { // Sanity check. Mat4s print as intended
         //   for i in 0..<len(visited_mat4) {
@@ -298,11 +300,11 @@ day09 :: proc() {
         }
       }
       // rl.DrawCubeV(rlnk, RLNK, rl.RED)
-      rl.DrawMesh(cube.meshes[0], cube.materials[0], IDENT_MAT)
+      rl.DrawMesh(cube.meshes[0], cube.materials[0], rl.Matrix(linalg.MATRIX4F32_IDENTITY))
       rl.EndMode3D()
       rl.EndDrawing()
     }
-
+    
     rl.CloseWindow()
   }
 }
