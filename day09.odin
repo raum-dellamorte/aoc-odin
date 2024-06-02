@@ -16,46 +16,46 @@ IDENT_MAT :: #row_major matrix[4,4]f32{
 }
 
 day09 :: proc() {
-  {
-    println("Day 09: Rope Bridge\n")
+  // {
+  //   println("Day 09: Rope Bridge\n")
 
-    input_file := #load("day09-input", string)
-    movements := strings.split(strings.trim_space(input_file), "\n")
-    num_mov := len(movements)
+  //   input_file := #load("day09-input", string)
+  //   movements := strings.split(strings.trim_space(input_file), "\n")
+  //   num_mov := len(movements)
 
-    visited := make([dynamic]Loc, 0, num_mov)
-    defer delete(visited)
-    append(&visited, Loc{0, 0})
+  //   visited := make([dynamic]Loc, 0, num_mov)
+  //   defer delete(visited)
+  //   append(&visited, Loc{0, 0})
 
-    visited2 := make([dynamic]Loc, 0, num_mov)
-    defer delete(visited2)
-    append(&visited2, Loc{0, 0})
+  //   visited2 := make([dynamic]Loc, 0, num_mov)
+  //   defer delete(visited2)
+  //   append(&visited2, Loc{0, 0})
 
-    mov := Moves.ErrDir
-    dist := 0
-    rope: [10]RopeLink = {}
+  //   mov := Moves.ErrDir
+  //   dist := 0
+  //   rope: [10]RopeLink = {}
 
-    // for i in 0..<10 { // Everything is initialized as 0 so this isn't needed.
-    //   rope[i] = RopeLink {}
-    // }
-    rope[1].visited = &visited
-    rope[9].visited = &visited2
+  //   // for i in 0..<10 { // Everything is initialized as 0 so this isn't needed.
+  //   //   rope[i] = RopeLink {}
+  //   // }
+  //   rope[1].visited = &visited
+  //   rope[9].visited = &visited2
 
-    for mov_line in movements {
-      // using Moves
-      mov, dist = get_mov(mov_line)
-      #partial switch mov {
-      case .ErrDir:
-        println("Error parsing direction:", mov)
-      case .ErrDist:
-        println("Error parsing distance:", mov)
-      }
-      move_rope(&rope, mov, dist)
-    }
+  //   for mov_line in movements {
+  //     // using Moves
+  //     mov, dist = get_mov(mov_line)
+  //     #partial switch mov {
+  //     case .ErrDir:
+  //       println("Error parsing direction:", mov)
+  //     case .ErrDist:
+  //       println("Error parsing distance:", mov)
+  //     }
+  //     move_rope(&rope, mov, dist)
+  //   }
 
-    println("Rope Link 1 visited", len(visited), "locations.")
-    println("Rope Link 9 visited", len(visited2), "locations.")
-  }
+  //   println("Rope Link 1 visited", len(visited), "locations.")
+  //   println("Rope Link 9 visited", len(visited2), "locations.")
+  // }
   {
     WIN: rl.Vector2 = {1280, 720}
     // RLNK : rl.Vector2 = { 50, 50 }
