@@ -229,7 +229,7 @@ day09 :: proc() {
           }
         }
         for &visd in visited_draw {
-          append(&visited_mat4, view_mat * rl.MatrixTranslate(visd.pos.x,visd.pos.y,visd.pos.z))
+          append(&visited_mat4, rl.MatrixTranslate(visd.pos.x,visd.pos.y,visd.pos.z))
         }
         // for i in 0..<len(visited_mat4) {
         //   if visited_mat4[i] == 0 { ordered_remove(&visited_mat4, i) }
