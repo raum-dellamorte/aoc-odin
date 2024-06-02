@@ -113,6 +113,7 @@ day09 :: proc() {
     
     // Meshes and Textures
     cube := rl.LoadModel("cube-1x1x1.obj")
+    cube.materials[0].shader = rope_trail_shader
     // textures := []
     // player_tex := rl.LoadTexture("CubeTex.png")
     // red_tex := rl.LoadTextureFromImage(rl.GenImageColor(256, 256, rl.RED))

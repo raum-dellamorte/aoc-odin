@@ -10,8 +10,10 @@ animating it with Unicode emoji which was neat, but then I wanted to do more Odi
 So back to this place, back to this time, again and again...
 
 What? Nevermind. I wanted to learn Raylib in Odin. It was easier, this time, at
-least in the beginning. At the moment, I'm trying to get textured rendering going,
-which means shaders and whatnot, and I will have to come back to that.
+least in the beginning.
+
+At the moment, my goal is a texture atlas for the instanced rendering which was
+the last thing I got working.
 
 Until next time...
 
@@ -37,3 +39,17 @@ a mess and I couldn't seem to clean it up without breaking it. Since then,
 instanced rendering has been my white whale. Gotta get over that hurdle. And it
 needs to be readable and understandable. Kotlin let me get away with too much.
 I like the way Odin makes me feel, UwU. Until it segfaults and I don't know why.
+
+0002: When you load a model it has a materials array attached to it. It appears
+that each Material needs to have a Shader attached to it. So THAT's how you use
+a shader! I've been going up and down
+[this](https://github.com/ChrisDill/raylib-instancing/blob/master/src/instancing/asteroids_instanced.c)
+instanced rendering example in C (in which I'm not even sure what version of Raylib
+is being targeted), attempting to work backwards to identify the minimum requirements
+for accomplishing instanced rendering (in my spare time between depression's lethargy
+and work hence the slow progress), and I finally noticed that they were assigning
+the shader they had loaded to the material of the model. At this point I'm not sure
+what all is contained in a Material. I'll look into it one day. Next goal is to have
+each instance access it's own texture from an atlas, specifically so that locations
+touched only by link 1 have a different texture from those touched only by link 9, which
+is different from links touched by both.
