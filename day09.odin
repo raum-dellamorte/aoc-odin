@@ -18,29 +18,23 @@ IDENT_MAT :: #row_major matrix[4,4]f32{
 day09 :: proc() {
   // {
   //   println("Day 09: Rope Bridge\n")
-
   //   input_file := #load("day09-input", string)
   //   movements := strings.split(strings.trim_space(input_file), "\n")
   //   num_mov := len(movements)
-
   //   visited := make([dynamic]Loc, 0, num_mov)
   //   defer delete(visited)
   //   append(&visited, Loc{0, 0})
-
   //   visited2 := make([dynamic]Loc, 0, num_mov)
   //   defer delete(visited2)
   //   append(&visited2, Loc{0, 0})
-
   //   mov := Moves.ErrDir
   //   dist := 0
   //   rope: [10]RopeLink = {}
-
   //   // for i in 0..<10 { // Everything is initialized as 0 so this isn't needed.
   //   //   rope[i] = RopeLink {}
   //   // }
   //   rope[1].visited = &visited
   //   rope[9].visited = &visited2
-
   //   for mov_line in movements {
   //     // using Moves
   //     mov, dist = get_mov(mov_line)
@@ -52,7 +46,6 @@ day09 :: proc() {
   //     }
   //     move_rope(&rope, mov, dist)
   //   }
-
   //   println("Rope Link 1 visited", len(visited), "locations.")
   //   println("Rope Link 9 visited", len(visited2), "locations.")
   // }
@@ -62,6 +55,7 @@ day09 :: proc() {
     RLNK: rl.Vector3 = {1, 1, 1}
     SPEED: f32 = 40
     ROPE_SPEED: f32 = 10
+    // Init Window BEFORE other Raylib operations like importing models and shaders
     rl.InitWindow(i32(WIN.x), i32(WIN.y), "Day 09: Rope Bridge")
 
     rlnk: rl.Vector3 = {0, 0, 0}
@@ -245,7 +239,7 @@ day09 :: proc() {
         rl.DrawMeshInstanced(cube.meshes[0], cube.materials[0], raw_data(visited_mat4), i32(len(visited_mat4)))
         
         // if len(visited_mat4) == 10 { // Sanity check. Mat4s print as intended
-        //   for i in 0..len(visited_mat4) {
+        //   for i in 0..<len(visited_mat4) {
         //     test := raw_data(visited_mat4)[i]
         //     println("mat4",test)
         //   }
