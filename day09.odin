@@ -110,22 +110,28 @@ day09 :: proc() {
     rope_trail_shader.locs[rl.ShaderLocationIndex.MATRIX_MODEL] = i32(rl.GetShaderLocationAttrib(rope_trail_shader, "instance"));
     rope_trail_shader.locs[rl.ShaderLocationIndex.MATRIX_VIEW] = i32(rl.GetShaderLocation(rope_trail_shader, "view"));
     rope_trail_shader.locs[rl.ShaderLocationIndex.MATRIX_PROJECTION] = i32(rl.GetShaderLocation(rope_trail_shader, "projection"));
+    player_shader := rl.LoadShader("res/shaders/player.vs", "res/shaders/player.fs")
+    player_shader.locs[rl.ShaderLocationIndex.MATRIX_MVP] = i32(rl.GetShaderLocation(player_shader, "mvp"));
+    player_shader.locs[rl.ShaderLocationIndex.MATRIX_VIEW] = i32(rl.GetShaderLocation(player_shader, "view"));
+    player_shader.locs[rl.ShaderLocationIndex.MATRIX_PROJECTION] = i32(rl.GetShaderLocation(player_shader, "projection"));
     
-    // Meshes and Textures
+    // Load Models
     cube := rl.LoadModel("cube-1x1x1.obj")
-    cube.materials[0].shader = rope_trail_shader
-    // textures := []
+    
+    // Load Textures
     // player_tex := rl.LoadTexture("CubeTex.png")
-    // red_tex := rl.LoadTextureFromImage(rl.GenImageColor(256, 256, rl.RED))
+    player_tex := cube.materials[0].maps[rl.MaterialMapIndex.ALBEDO].texture
+    red_tex := rl.LoadTextureFromImage(rl.GenImageColor(256, 256, rl.RED))
     // orange_tex := rl.LoadTextureFromImage(rl.GenImageColor(256,256,rl.ORANGE))
     // gold_tex := rl.LoadTextureFromImage(rl.GenImageColor(256,256,rl.GOLD))
     // green_tex := rl.LoadTextureFromImage(rl.GenImageColor(256,256,rl.GREEN))
     // darkblue_tex := rl.LoadTextureFromImage(rl.GenImageColor(256,256,rl.DARKBLUE))
     // purple_tex := rl.LoadTextureFromImage(rl.GenImageColor(256,256,rl.PURPLE))
-    // materials : [7]rl.Material = {}
-    // cube.materials = raw_data(materials[:])
-    // cube.materials[0].maps[rl.MaterialMapIndex.ALBEDO].texture = player_tex
-    // cube.materials[1].maps[rl.MaterialMapIndex.ALBEDO].texture = red_tex
+    
+    // Fix Cube Materials
+    matmaps, mats := gen_materials({player_tex,red_tex},{player_shader,rope_trail_shader}) // it seems you must keep the vars you point to in scope. makes sense
+    cube.materials = raw_data(mats[:])
+    // Below, remnants of the old way
     // cube.materials[2].maps[rl.MaterialMapIndex.ALBEDO].texture = orange_tex
     // cube.materials[3].maps[rl.MaterialMapIndex.ALBEDO].texture = gold_tex
     // cube.materials[4].maps[rl.MaterialMapIndex.ALBEDO].texture = green_tex
@@ -225,7 +231,7 @@ day09 :: proc() {
         }
         // After including the shader in the material, it now renders correctly!
         rl.BeginShaderMode(rope_trail_shader)
-        rl.DrawMeshInstanced(cube.meshes[0], cube.materials[0], raw_data(visited_mat4), i32(len(visited_mat4)))
+        rl.DrawMeshInstanced(cube.meshes[0], cube.materials[1], raw_data(visited_mat4), i32(len(visited_mat4)))
         rl.EndShaderMode()
         
         for i := 9; i >= 0; i -= 1 {
@@ -280,8 +286,12 @@ day09 :: proc() {
           loop_state = 3
         }
       }
+      
+      rl.BeginShaderMode(player_shader)
       // rl.DrawCubeV(rlnk, RLNK, rl.RED)
-      rl.DrawMesh(cube.meshes[0], cube.materials[0], rl.Matrix(linalg.MATRIX4F32_IDENTITY))
+      rl.DrawMesh(cube.meshes[0], cube.materials[0], rl.Matrix(linalg.matrix4_translate_f32(rlnk) ) )
+      rl.EndShaderMode()
+      
       rl.rlPopMatrix() // Pushing after Begin and Popping before End, makes sense? Must read docs ... which are for C, slight differences...
       rl.EndMode3D()
       rl.EndDrawing()
@@ -396,4 +406,19 @@ move_link :: proc(link: ^RopeLink, xd: int, yd: int) {
   if link^.moved && (link^.visited != nil) && !slice.contains(link^.visited[:], link^.loc) {
     append(link^.visited, link^.loc)
   }
+}
+
+gen_materials :: proc(textures: []rl.Texture, shaders: []rl.Shader) -> ([dynamic][11]rl.MaterialMap, [dynamic]rl.Material) {
+  sz := len(textures)
+  matmaps := make([dynamic][11]rl.MaterialMap,sz,sz)
+  mats := make([dynamic]rl.Material,sz,sz)
+  for i in 0..<sz {
+    matmaps[i] = [11]rl.MaterialMap {}
+    mats[i].maps = raw_data(matmaps[i][:])
+    mats[i].maps[0].texture = textures[i]
+    mats[i].maps[0].color = rl.Color {255,255,255,255}
+    mats[i].shader = shaders[i]
+    println("mats:",mats)
+  }
+  return matmaps, mats
 }
