@@ -157,10 +157,6 @@ day09 :: proc() {
     frametime: f32 = f32(1.0 / 60.0)
     for !rl.WindowShouldClose() {
       frametime = rl.GetFrameTime()
-      // if !(frametime < f32(1.0/20.0)) {
-      //   // print("-Slow:%.02v-",frametime)
-      //   continue
-      // }
       dist_player = frametime * SPEED
       
       if loop_state == 0 {
@@ -195,11 +191,6 @@ day09 :: proc() {
       if loop_state == 1 {
         // animate rope pieces moving
         
-        // Trying out instancing. I assume what I have so far is not working
-        // bc it needs a shader and all that garbage.
-        // DrawMeshInstanced :: proc "c" (
-        //   mesh: Mesh, material: Material, transforms: [^]matrix[4, 4]f32, instances: i32)
-        
         // Screen bounds
         boundL := camera.position.x - (WIN.x / 2.0) - 2.0
         boundR := boundL + WIN.x + 4.0
@@ -232,20 +223,10 @@ day09 :: proc() {
         for &visd in visited_draw {
           append(&visited_mat4, rl.MatrixTranslate(visd.pos.x,visd.pos.y,visd.pos.z))
         }
-        // for i in 0..<len(visited_mat4) {
-        //   if visited_mat4[i] == 0 { ordered_remove(&visited_mat4, i) }
-        // }
-        // Compiles, runs, draws nothing. 
+        // After including the shader in the material, it now renders correctly!
         rl.BeginShaderMode(rope_trail_shader)
         rl.DrawMeshInstanced(cube.meshes[0], cube.materials[0], raw_data(visited_mat4), i32(len(visited_mat4)))
         rl.EndShaderMode()
-        
-        // if len(visited_mat4) == 10 { // Sanity check. Mat4s print as intended
-        //   for i in 0..<len(visited_mat4) {
-        //     test := raw_data(visited_mat4)[i]
-        //     println("mat4",test)
-        //   }
-        // }
         
         for i := 9; i >= 0; i -= 1 {
           r_to := loc_vec(rope_anim[i].link.loc)
