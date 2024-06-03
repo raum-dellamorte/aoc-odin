@@ -51,7 +51,7 @@ day09 :: proc() {
     // Init Window BEFORE other Raylib operations like importing models and shaders
     rl.InitWindow(i32(WIN.x), i32(WIN.y), "Day 09: Rope Bridge")
     
-    rlnk: rl.Vector3 = {0, 0, 0}
+    player_pos: rl.Vector3 = {0, 0, 0}
     // offset : rl.Vector2 = { 0, 0 }
     // win_offset : rl.Vector2 = WIN / 2.0
     dist_player: f32 = 0
@@ -200,12 +200,12 @@ day09 :: proc() {
       }
       
       // Move "Player"
-      if rl.IsKeyDown(.W) || rl.IsKeyDown(.UP) {rlnk.y += dist_player}
-      if rl.IsKeyDown(.S) || rl.IsKeyDown(.DOWN) {rlnk.y -= dist_player}
-      if rl.IsKeyDown(.A) || rl.IsKeyDown(.LEFT) {rlnk.x -= dist_player}
-      if rl.IsKeyDown(.D) || rl.IsKeyDown(.RIGHT) {rlnk.x += dist_player}
-      // offset = (WIN / 2.0) - (RLNK / 2.0) + rlnk
-      move_cam(&camera, &rlnk)
+      if rl.IsKeyDown(.W) || rl.IsKeyDown(.UP) {player_pos.y += dist_player}
+      if rl.IsKeyDown(.S) || rl.IsKeyDown(.DOWN) {player_pos.y -= dist_player}
+      if rl.IsKeyDown(.A) || rl.IsKeyDown(.LEFT) {player_pos.x -= dist_player}
+      if rl.IsKeyDown(.D) || rl.IsKeyDown(.RIGHT) {player_pos.x += dist_player}
+      // offset = (WIN / 2.0) - (RLNK / 2.0) + player_pos
+      move_cam(&camera, &player_pos)
       
       rl.BeginDrawing()
       rl.ClearBackground(rl.BLUE)
@@ -308,8 +308,8 @@ day09 :: proc() {
       }
       
       rl.BeginShaderMode(player_shader)
-      // rl.DrawCubeV(rlnk, RLNK, rl.RED)
-      rl.DrawMesh(cube.meshes[0], cube.materials[0], rl.Matrix(linalg.matrix4_translate_f32(rlnk) ) )
+      // rl.DrawCubeV(player_pos, RLNK, rl.RED)
+      rl.DrawMesh(cube.meshes[0], cube.materials[0], rl.Matrix(linalg.matrix4_translate_f32(player_pos) ) )
       rl.EndShaderMode()
       
       rl.rlPopMatrix() // Pushing after Begin and Popping before End, makes sense? Must read docs ... which are for C, slight differences...
