@@ -106,37 +106,57 @@ day09 :: proc() {
     // Shaders
     rope_trail_shader := rl.LoadShader("res/shaders/rope_trail_instanced.vs", "res/shaders/rope_trail_instanced.fs")
     // defer rl.UnloadShader(rope_trail_shader) // This Segfaults. Turns out it's automatic.
-    rope_trail_shader.locs[rl.ShaderLocationIndex.MATRIX_MVP] = i32(rl.GetShaderLocation(rope_trail_shader, "mvp"));
-    rope_trail_shader.locs[rl.ShaderLocationIndex.MATRIX_MODEL] = i32(rl.GetShaderLocationAttrib(rope_trail_shader, "instance"));
-    rope_trail_shader.locs[rl.ShaderLocationIndex.MATRIX_VIEW] = i32(rl.GetShaderLocation(rope_trail_shader, "view"));
-    rope_trail_shader.locs[rl.ShaderLocationIndex.MATRIX_PROJECTION] = i32(rl.GetShaderLocation(rope_trail_shader, "projection"));
+    rope_trail_shader.locs[SLI.MATRIX_MVP] = i32(rl.GetShaderLocation(rope_trail_shader, "mvp"));
+    rope_trail_shader.locs[SLI.MATRIX_MODEL] = i32(rl.GetShaderLocationAttrib(rope_trail_shader, "instance"));
+    rope_trail_shader.locs[SLI.MATRIX_VIEW] = i32(rl.GetShaderLocation(rope_trail_shader, "view"));
+    rope_trail_shader.locs[SLI.MATRIX_PROJECTION] = i32(rl.GetShaderLocation(rope_trail_shader, "projection"));
     player_shader := rl.LoadShader("res/shaders/player.vs", "res/shaders/player.fs")
-    player_shader.locs[rl.ShaderLocationIndex.MATRIX_MVP] = i32(rl.GetShaderLocation(player_shader, "mvp"));
-    player_shader.locs[rl.ShaderLocationIndex.MATRIX_VIEW] = i32(rl.GetShaderLocation(player_shader, "view"));
-    player_shader.locs[rl.ShaderLocationIndex.MATRIX_PROJECTION] = i32(rl.GetShaderLocation(player_shader, "projection"));
+    player_shader.locs[SLI.MATRIX_MVP] = i32(rl.GetShaderLocation(player_shader, "mvp"));
+    player_shader.locs[SLI.MATRIX_VIEW] = i32(rl.GetShaderLocation(player_shader, "view"));
+    player_shader.locs[SLI.MATRIX_PROJECTION] = i32(rl.GetShaderLocation(player_shader, "projection"));
+    // Shaders list
+    shaders : []rl.Shader = { player_shader, rope_trail_shader }
+    
+    //Textures
+    textures := [?]rl.Texture {
+      rl.LoadTexture("CubeTex.png"),
+      rl.LoadTextureFromImage(rl.GenImageColor(256, 256, rl.WHITE)),
+      rl.LoadTextureFromImage(rl.GenImageColor(256, 256, rl.RED)),
+      rl.LoadTextureFromImage(rl.GenImageColor(256, 256, rl.ORANGE)),
+      rl.LoadTextureFromImage(rl.GenImageColor(256, 256, rl.GOLD)),
+      rl.LoadTextureFromImage(rl.GenImageColor(256, 256, rl.GREEN)),
+      rl.LoadTextureFromImage(rl.GenImageColor(256, 256, rl.DARKBLUE)),
+      rl.LoadTextureFromImage(rl.GenImageColor(256, 256, rl.PURPLE)),
+    }
+    TexEnum :: enum{
+      None,
+      Player,
+      Rope,
+      Red, Orange, Gold, Green, DarkBlue, Purple,
+    }
+    Tex := [TexEnum]int {
+      .None = 0,
+      .Player = 1, .Rope = 2,
+      .Red = 3, .Orange = 4, .Gold = 5,
+      .Green = 6, .DarkBlue = 7, .Purple = 8,
+    }
+    
+    // Colors
+    colors : []rl.Color = { rl.WHITE }
     
     // Load Models
     cube := rl.LoadModel("cube-1x1x1.obj")
+    cube_tex := cube.materials[0].maps[MMI.ALBEDO].texture // Backup included Texture for no reason
     
-    // Load Textures
-    // player_tex := rl.LoadTexture("CubeTex.png")
-    player_tex := cube.materials[0].maps[rl.MaterialMapIndex.ALBEDO].texture
-    red_tex := rl.LoadTextureFromImage(rl.GenImageColor(256, 256, rl.RED))
-    // orange_tex := rl.LoadTextureFromImage(rl.GenImageColor(256,256,rl.ORANGE))
-    // gold_tex := rl.LoadTextureFromImage(rl.GenImageColor(256,256,rl.GOLD))
-    // green_tex := rl.LoadTextureFromImage(rl.GenImageColor(256,256,rl.GREEN))
-    // darkblue_tex := rl.LoadTextureFromImage(rl.GenImageColor(256,256,rl.DARKBLUE))
-    // purple_tex := rl.LoadTextureFromImage(rl.GenImageColor(256,256,rl.PURPLE))
+    // Material Assignments
+    player_assign :=     MatAssign {1,Tex[.Player],1,0.0}
+    rope_trail_assign := MatAssign {2,Tex[.Gold],  1,0.0}
     
     // Fix Cube Materials
-    matmaps, mats := gen_materials({player_tex,red_tex},{player_shader,rope_trail_shader}) // it seems you must keep the vars you point to in scope. makes sense
-    cube.materials = raw_data(mats[:])
-    // Below, remnants of the old way
-    // cube.materials[2].maps[rl.MaterialMapIndex.ALBEDO].texture = orange_tex
-    // cube.materials[3].maps[rl.MaterialMapIndex.ALBEDO].texture = gold_tex
-    // cube.materials[4].maps[rl.MaterialMapIndex.ALBEDO].texture = green_tex
-    // cube.materials[5].maps[rl.MaterialMapIndex.ALBEDO].texture = darkblue_tex
-    // cube.materials[6].maps[rl.MaterialMapIndex.ALBEDO].texture = purple_tex
+    cube_mat_helper := gen_materials( // it seems you must keep the vars you point to in scope. makes sense
+      { player_assign, rope_trail_assign }, shaders, textures[:], colors,
+    )
+    cube.materials = cube_mat_helper.pointer
     
     // Camera
     camera := rl.Camera3D {
