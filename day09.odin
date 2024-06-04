@@ -218,24 +218,26 @@ day09 :: proc() {
         // animate rope pieces moving
         
         // Screen bounds
-        boundL := camera.position.x - (WIN.x / 2.0) - 2.0
-        boundR := boundL + WIN.x + 4.0
-        boundD := camera.position.y - (WIN.y / 2.0) - 2.0
-        boundU := boundD + WIN.y + 4.0
+        units_w : f32 = 30
+        units_h : f32 = 17
+        boundL := camera.position.x - units_w
+        boundR := boundL + (units_w * 2)
+        boundD := camera.position.y - units_h
+        boundU := boundD + (units_h * 2)
         
         clear_soa(&visited_draw)
         clear(&visited_mat4)
         for pnt in rope[1].visited {
           x := f32(pnt.x)
           y := f32(pnt.y)
-          if !(x < boundL || x > boundR || y > boundU || y < boundD) {
+          if x > boundL && x < boundR && y < boundU && y > boundD {
             append_soa(&visited_draw, DrawMeSOA { pnt, DrawMe.First, rl.Vector3{x,y,0} })
           }
         }
         for pnt in rope[9].visited {
           x := f32(pnt.x)
           y := f32(pnt.y)
-          if !(x < boundL || x > boundR || y > boundU || y < boundD) {
+          if x > boundL && x < boundR && y < boundU && y > boundD {
             found := false
             for &visd in visited_draw {
               if visd.loc != pnt { continue }
