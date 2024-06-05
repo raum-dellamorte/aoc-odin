@@ -91,6 +91,8 @@ day09 :: proc() {
     defer delete_soa(visited_draw)
     visited_mat4 := make([dynamic] #row_major matrix[4, 4]f32, 0, num_mov * num_mov)
     defer delete(visited_mat4)
+    visited_tex_offset := make([dynamic]f32, 0, 1000)
+    defer delete(visited_tex_offset)
     
     mov := Moves.ErrDir
     dist := 0
@@ -108,6 +110,7 @@ day09 :: proc() {
     // defer rl.UnloadShader(rope_trail_shader) // This Segfaults. Turns out it's automatic.
     rope_trail_shader.locs[SLI.MATRIX_MVP] = i32(rl.GetShaderLocation(rope_trail_shader, "mvp"));
     rope_trail_shader.locs[SLI.MATRIX_MODEL] = i32(rl.GetShaderLocationAttrib(rope_trail_shader, "instance"));
+    rope_trail_shader_yOffset := rl.GetShaderLocation(rope_trail_shader, "yOffset");
     rope_trail_shader.locs[SLI.MATRIX_VIEW] = i32(rl.GetShaderLocation(rope_trail_shader, "view"));
     rope_trail_shader.locs[SLI.MATRIX_PROJECTION] = i32(rl.GetShaderLocation(rope_trail_shader, "projection"));
     player_shader := rl.LoadShader("res/shaders/player.vs", "res/shaders/player.fs")
@@ -120,7 +123,7 @@ day09 :: proc() {
     //Textures
     textures := [?]rl.Texture {
       rl.LoadTexture("CubeTex.png"),
-      rl.LoadTextureFromImage(rl.GenImageColor(256, 256, rl.WHITE)),
+      rl.LoadTexture("cube-color-atlas.png"),
       rl.LoadTextureFromImage(rl.GenImageColor(256, 256, rl.RED)),
       rl.LoadTextureFromImage(rl.GenImageColor(256, 256, rl.ORANGE)),
       rl.LoadTextureFromImage(rl.GenImageColor(256, 256, rl.GOLD)),
@@ -145,12 +148,13 @@ day09 :: proc() {
     colors : []rl.Color = { rl.WHITE }
     
     // Load Models
-    cube := rl.LoadModel("cube-1x1x1.obj")
-    cube_tex := cube.materials[0].maps[MMI.ALBEDO].texture // Backup included Texture for no reason
+    player := rl.LoadModel("cube-1x1x1.obj")
+    // player_tex_bak := cube.materials[0].maps[MMI.ALBEDO].texture // Backup included Texture for no reason
+    cube := rl.LoadModel("cube-tex-atlas.obj")
     
     // Material Assignments
     player_assign :=     MatAssign {1,Tex[.Player],1,0.0}
-    rope_trail_assign := MatAssign {2,Tex[.Gold],  1,0.0}
+    rope_trail_assign := MatAssign {2,Tex[.Rope],  1,0.0}
     
     // Fix Cube Materials
     cube_mat_helper := gen_materials( // it seems you must keep the vars you point to in scope. makes sense
@@ -227,6 +231,7 @@ day09 :: proc() {
         
         clear_soa(&visited_draw)
         clear(&visited_mat4)
+        clear(&visited_tex_offset)
         for pnt in rope[1].visited {
           x := f32(pnt.x)
           y := f32(pnt.y)
@@ -249,9 +254,19 @@ day09 :: proc() {
           }
         }
         for &visd in visited_draw {
-          append(&visited_mat4, rl.MatrixTranslate(visd.pos.x,visd.pos.y,visd.pos.z))
+          append(&visited_mat4, rl.MatrixTranslate(visd.pos.x,visd.pos.y,visd.pos.z) * rl.MatrixScale(0.25,0.25,0.25))
+          yOffset : f32 = 1022
+          switch visd.draw_me {
+            case .Both: yOffset -= 510
+            case .Last: yOffset -= 340
+            case .First: yOffset -= 170
+            case .None:
+          }
+          yOffset = yOffset / 1024.0
+          append(&visited_tex_offset, yOffset)
         }
         // After including the shader in the material, it now renders correctly!
+        rl.SetShaderValueV(rope_trail_shader,rope_trail_shader_yOffset,raw_data(visited_tex_offset[:]),rl.ShaderUniformDataType.FLOAT,i32(len(visited_tex_offset)))
         rl.BeginShaderMode(rope_trail_shader)
         rl.DrawMeshInstanced(cube.meshes[0], cube.materials[1], raw_data(visited_mat4), i32(len(visited_mat4)))
         rl.EndShaderMode()

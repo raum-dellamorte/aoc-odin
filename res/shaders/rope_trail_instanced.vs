@@ -10,6 +10,7 @@ layout (location = 12) in mat4 instance;
 uniform mat4 mvp;
 uniform mat4 projection;
 uniform mat4 view;
+uniform float[1000] yOffset;
 
 // Output vertex attributes (to fragment shader)
 out vec2 fragTexCoord;
@@ -22,6 +23,7 @@ void main()
 {
     // Send vertex attributes to fragment shader
     fragTexCoord = vertexTexCoord;
+    fragTexCoord.y -= yOffset[gl_InstanceID];
     
     // Calculate final vertex position
     mat4 mvpi = mvp * instance;
