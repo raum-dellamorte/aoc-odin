@@ -49,3 +49,7 @@ gen_materials :: proc(assignments: []MatAssign, shaders: []rl.Shader, textures: 
   }
   return MaterialHelper{matmaps, mats, raw_data(mats[:])}
 }
+delete_mat_helper :: proc(mh: MaterialHelper) {
+  delete(mh.maps)
+  delete(mh.mats)
+}

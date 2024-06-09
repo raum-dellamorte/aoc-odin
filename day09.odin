@@ -160,6 +160,8 @@ day09 :: proc() {
     cube_mat_helper := gen_materials( // it seems you must keep the vars you point to in scope. makes sense
       { player_assign, rope_trail_assign }, shaders, textures[:], colors,
     )
+    defer delete_mat_helper(cube_mat_helper)
+    
     cube.materials = cube_mat_helper.pointer
     
     // Camera
