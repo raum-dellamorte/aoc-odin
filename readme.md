@@ -53,3 +53,18 @@ what all is contained in a Material. I'll look into it one day. Next goal is to 
 each instance access it's own texture from an atlas, specifically so that locations
 touched only by link 1 have a different texture from those touched only by link 9, which
 is different from links touched by both.
+
+0003: This last commit involved staying up too late when I have to be up early. That's
+the only way to get real work done. When you *should not* be doing what you're doing,
+you'll do your *best* work. 6 hours. I made a new cube in blender with the goal of being
+able to shift texture coordinates down by around 170px to get to the next texture in
+my roll-your-own atlas texture, and probably spent too long on that bc I didn't start with
+the code until I should have been in bed, I think. So, in the code, an array of floats was
+needed for per instance y offsets and luckily I had the information about each instance I
+needed already ready already with the DrawMe enum. Past me DID think about these things!
+The rest of the time was spent figuring out how to pass the data to the shader in a way
+that C understands. I'm finishing this entry days later so the details have become a bit
+muddy, but I had to use the rl.SetShaderValueV function to get my offsets loaded and by
+only several hours after bedtime I had tiny instanced squares in 3 colors! And that uses
+only half the atlas! I could add details to those cubes of I wanted to. Stupid, meaningless
+details for a "rope simulation" from Advent Of Code 2022, Day 09. I could... And I might...
