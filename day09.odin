@@ -268,9 +268,10 @@ day09 :: proc() {
           append(&visited_tex_offset, yOffset)
         }
         // After including the shader in the material, it now renders correctly!
-        rl.SetShaderValueV(rope_trail_shader,rope_trail_shader_yOffset,raw_data(visited_tex_offset[:]),rl.ShaderUniformDataType.FLOAT,i32(len(visited_tex_offset)))
+        rl.SetShaderValueV(rope_trail_shader,rope_trail_shader_yOffset,raw_data(visited_tex_offset),SUDT.FLOAT,i32(len(visited_tex_offset)))
         rl.BeginShaderMode(rope_trail_shader)
         rl.DrawMeshInstanced(cube.meshes[0], cube.materials[1], raw_data(visited_mat4), i32(len(visited_mat4)))
+        // draw_mesh_instanced(cube.meshes[0], cube.materials[1], visited_mat4[:])
         rl.EndShaderMode()
         
         for i := 9; i >= 0; i -= 1 {
