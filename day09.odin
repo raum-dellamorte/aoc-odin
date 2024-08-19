@@ -45,7 +45,7 @@ day09 :: proc() {
   {
     WIN: rl.Vector2 = {1280, 720}
     // RLNK : rl.Vector2 = { 50, 50 }
-    RLNK: rl.Vector3 = {1, 1, 1}
+		// RLNK: rl.Vector3 = {1, 1, 1}
     SPEED: f32 = 40
     ROPE_SPEED: f32 = 10
     // Init Window BEFORE other Raylib operations like importing models and shaders
@@ -332,7 +332,7 @@ day09 :: proc() {
       rl.DrawMesh(cube.meshes[0], cube.materials[0], rl.Matrix(linalg.matrix4_translate_f32(player_pos) ) )
       rl.EndShaderMode()
       
-      rl.rlPopMatrix() // Pushing after Begin and Popping before End, makes sense? Must read docs ... which are for C, slight differences...
+			// rlgl.PopMatrix() // Pushing after Begin and Popping before End, makes sense? Must read docs ... which are for C, slight differences...
       rl.EndMode3D()
       rl.EndDrawing()
     }
