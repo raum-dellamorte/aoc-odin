@@ -319,6 +319,7 @@ day09 :: proc() {
 					raw_data(visited_mat4),
 					i32(len(visited_mat4)),
 				)
+				// Swapping the above for the below still compiles but renders nothing.
 				// draw_mesh_instanced(cube.meshes[0], cube.materials[1], visited_mat4[:])
 				rl.EndShaderMode()
 
