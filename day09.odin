@@ -216,7 +216,7 @@ day09 :: proc() {
       rl.BeginDrawing()
       rl.ClearBackground(rl.BLUE)
       rl.BeginMode3D(camera)
-      rl.rlPushMatrix()  // I don't yet understand this, just trying it
+			// rlgl.PushMatrix()  // I don't yet understand this, just trying it
       
       view_mat := rl.GetCameraMatrix(camera)
       
