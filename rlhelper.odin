@@ -1,11 +1,11 @@
 package aoc2022
 
-import "core:math/linalg" // temp for debugging
-import "core:os"
-import "core:slice"
-import "core:strings"
+// import "core:math/linalg" // temp for debugging
+// import "core:os"
+// import "core:slice"
+// import "core:strings"
 
-import gl "vendor:OpenGL"
+// import gl "vendor:OpenGL"
 import rl "vendor:raylib"
 import rlgl "vendor:raylib/rlgl"
 
@@ -242,8 +242,7 @@ draw_mesh_instanced :: proc(mesh: rl.Mesh, material: rl.Material, transforms: []
     }
 
     // Bind mesh VBO data: vertex tangents (shader-location = 4, if available)
-    if (material.shader.locs[SLI.VERTEX_TANGENT] != -1)
-    {
+    if (material.shader.locs[SLI.VERTEX_TANGENT] != -1) {
       rlgl.EnableVertexBuffer(mesh.vboId[4])
       rlgl.SetVertexAttribute(u32(material.shader.locs[SLI.VERTEX_TANGENT]), 4, rlgl.FLOAT, false, 0, ZeroPtr)
       rlgl.EnableVertexAttribute(u32(material.shader.locs[SLI.VERTEX_TANGENT]))
@@ -275,7 +274,7 @@ draw_mesh_instanced :: proc(mesh: rl.Mesh, material: rl.Material, transforms: []
     }
 
     // Send combined model-view-projection matrix to shader
-    rlgl.SetUniformMatrix(material.shader.locs[SLI.MATRIX_MVP], matModelViewProjection);
+    rlgl.SetUniformMatrix(material.shader.locs[SLI.MATRIX_MVP], matModelViewProjection)
 
     // Draw mesh instanced
     if mesh.indices != ZeroPtr {
@@ -289,7 +288,7 @@ draw_mesh_instanced :: proc(mesh: rl.Mesh, material: rl.Material, transforms: []
   for i in 0..<MAX_MATERIAL_MAPS {
     if material.maps[i].texture.id > 0 {
       // Select current shader texture slot
-      rlgl.ActiveTextureSlot( i32(i) );
+      rlgl.ActiveTextureSlot( i32(i) )
 
       // Disable texture for active slot
       #partial switch cast(MMI) i {
@@ -302,12 +301,12 @@ draw_mesh_instanced :: proc(mesh: rl.Mesh, material: rl.Material, transforms: []
   }
 
   // Disable all possible vertex array objects (or VBOs)
-  rlgl.DisableVertexArray();
-  rlgl.DisableVertexBuffer();
-  rlgl.DisableVertexBufferElement();
+  rlgl.DisableVertexArray()
+  rlgl.DisableVertexBuffer()
+  rlgl.DisableVertexBufferElement()
 
   // Disable shader program
-  rlgl.DisableShader();
+  rlgl.DisableShader()
 
   // Remove instance transforms buffer
   rlgl.UnloadVertexBuffer(instancesVboId)
