@@ -18,6 +18,8 @@ MAX_MATERIAL_MAPS :: 12
 
 ZeroPtr :: rawptr(uintptr(0)) // this is the same as c.NULL
 
+RL_Flat4x4Matrix :: [16]f32
+
 MaterialHelper :: struct {
   maps: [dynamic][11]rl.MaterialMap,
   mats: [dynamic]rl.Material,
@@ -66,7 +68,7 @@ delete_mat_helper :: proc(mh: MaterialHelper) {
 // Currently not working, but it compiles!
 // ------------------------------------------
 // Draw multiple mesh instances with material and different transforms
-draw_mesh_instanced :: proc(mesh: rl.Mesh, material: rl.Material, transforms: []#row_major matrix[4,4]f32) {
+draw_mesh_instanced :: proc "c" (mesh: rl.Mesh, material: rl.Material, transforms: ^[dynamic]rl.Matrix) {
   instances: int = len(transforms)
   if instances < 1 { return }
 
@@ -79,26 +81,36 @@ draw_mesh_instanced :: proc(mesh: rl.Mesh, material: rl.Material, transforms: []
   if material.shader.locs[SLI.COLOR_DIFFUSE] != -1 {
     // println("COLOR_DIFFUSE set uniform")
     values: [4]f32 = {
-      f32(material.maps[MMI.ALBEDO].color.r)/255.0,
-      f32(material.maps[MMI.ALBEDO].color.g)/255.0,
-      f32(material.maps[MMI.ALBEDO].color.b)/255.0,
-      f32(material.maps[MMI.ALBEDO].color.a)/255.0,
-    }
-    rlgl.SetUniform(material.shader.locs[SLI.COLOR_DIFFUSE], raw_data(values[:]), i32(SUDT.VEC4), 1)
+      f32(material.maps[MMI.ALBEDO].color.r),
+      f32(material.maps[MMI.ALBEDO].color.g),
+      f32(material.maps[MMI.ALBEDO].color.b),
+      f32(material.maps[MMI.ALBEDO].color.a),
+    }/255.0 // Divides each element by 255.0 to get values between 0.0 and 1.0
+    rlgl.SetUniform(
+      locIndex = material.shader.locs[SLI.COLOR_DIFFUSE], 
+      value = raw_data(&values), 
+      uniformType = i32(SUDT.VEC4), 
+      count = 1,
+    )
   }
 
   // Upload to shader material.colSpecular (if location available)
   if material.shader.locs[SLI.COLOR_SPECULAR] != -1 {
     // println("COLOR_SPECULAR set uniform")
     values: [4]f32 = {
-      f32(material.maps[SLI.COLOR_SPECULAR].color.r)/255.0,
-      f32(material.maps[SLI.COLOR_SPECULAR].color.g)/255.0,
-      f32(material.maps[SLI.COLOR_SPECULAR].color.b)/255.0,
-      f32(material.maps[SLI.COLOR_SPECULAR].color.a)/255.0,
-    }
-    rlgl.SetUniform(material.shader.locs[SLI.COLOR_SPECULAR], raw_data(values[:]), i32(SUDT.VEC4), 1)
+      f32(material.maps[SLI.COLOR_SPECULAR].color.r),
+      f32(material.maps[SLI.COLOR_SPECULAR].color.g),
+      f32(material.maps[SLI.COLOR_SPECULAR].color.b),
+      f32(material.maps[SLI.COLOR_SPECULAR].color.a),
+    }/255.0
+    rlgl.SetUniform(
+      locIndex = material.shader.locs[SLI.COLOR_SPECULAR], 
+      value = raw_data(&values), 
+      uniformType = i32(SUDT.VEC4), 
+      count = 1,
+    )
   }
-
+  
   // Get a copy of current matrices to work with,
   // just in case stereo render is required, and we need to modify them
   // NOTE: At this point the modelview matrix just contains the view matrix (camera)
@@ -108,41 +120,30 @@ draw_mesh_instanced :: proc(mesh: rl.Mesh, material: rl.Material, transforms: []
   matView: rl.Matrix = rlgl.GetMatrixModelview()
   matModelView: rl.Matrix = rl.Matrix(1) // This assignment is ignored and replaced with the result of rlgl.GetMatrixTransform() * matView
   matProjection: rl.Matrix = rlgl.GetMatrixProjection()
-
+  
   // Upload view and projection matrices (if locations available)
-  if material.shader.locs[SLI.MATRIX_VIEW] != -1 { rlgl.SetUniformMatrix(material.shader.locs[SLI.MATRIX_VIEW], matView) }
-  if material.shader.locs[SLI.MATRIX_PROJECTION] != -1 { rlgl.SetUniformMatrix(material.shader.locs[SLI.MATRIX_PROJECTION], matProjection) }
-
+  if material.shader.locs[SLI.MATRIX_VIEW] != -1 {
+    rlgl.SetUniformMatrix(
+      locIndex = material.shader.locs[SLI.MATRIX_VIEW], 
+      mat = matView,
+    )
+  }
+  if material.shader.locs[SLI.MATRIX_PROJECTION] != -1 {
+    rlgl.SetUniformMatrix(
+      locIndex = material.shader.locs[SLI.MATRIX_PROJECTION],
+      mat = matProjection,
+    )
+  }
+  
   // Create instances buffer
-  // instanceTransforms = (float16 *)RL_MALLOC(instances*sizeof(float16))
-  instanceTransforms0 := make([dynamic][16]f16,instances,instances)
-  instanceTransforms := make([dynamic][^]f16,instances,instances)
-  defer delete(instanceTransforms0)
-  defer delete(instanceTransforms)
-
+  instanceTransforms := (cast ([^]RL_Flat4x4Matrix) rl.MemAlloc(cast (u32) instances * size_of(RL_Flat4x4Matrix)))
+  defer rl.MemFree(instanceTransforms)
+  
   // Fill buffer with instances transformations as float16 arrays
   for i in 0..<instances {
-    // t32 := rl.MatrixToFloatV(transforms[i])
-    t := transforms[i]
-    t16 := [16]f16{
-      f16(t[0,0]), f16(t[0,1]), f16(t[0,2]), f16(t[0,3]),
-      f16(t[1,0]), f16(t[1,1]), f16(t[1,2]), f16(t[1,3]),
-      f16(t[2,0]), f16(t[2,1]), f16(t[2,2]), f16(t[2,3]),
-      f16(t[3,0]), f16(t[3,1]), f16(t[3,2]), f16(t[3,3]),
-    }
-    // t16 := [16]f16{
-    //   f16(t[0,0]), f16(t[1,0]), f16(t[2,0]), f16(t[3,0]),
-    //   f16(t[0,1]), f16(t[1,1]), f16(t[2,1]), f16(t[3,1]),
-    //   f16(t[0,2]), f16(t[1,2]), f16(t[2,2]), f16(t[3,2]),
-    //   f16(t[0,3]), f16(t[1,3]), f16(t[2,3]), f16(t[3,3]),
-    // }
-    // for i in 0..<16 {
-    //   t16[i] = f16(t32[i])
-    // }
-    instanceTransforms0[i] = t16
-    instanceTransforms[i] = raw_data(instanceTransforms0[i][:])
+    instanceTransforms[i] = rl.MatrixToFloatV(transforms[i])
   }
-
+  
   // Enable mesh VAO to attach new buffer
   rlgl.EnableVertexArray(mesh.vaoId)
 
@@ -150,16 +151,22 @@ draw_mesh_instanced :: proc(mesh: rl.Mesh, material: rl.Material, transforms: []
   // It isn't clear which would be reliably faster in all cases and on all platforms,
   // anecdotally glMapBuffer() seems very slow (syncs) while glBufferSubData() seems
   // no faster, since we're transferring all the transform matrices anyway
-  // instancesVboId = rlLoadVertexBuffer(instanceTransforms, instances*sizeof(float16), false);
-  // instancesVboId := rlgl.LoadVertexBuffer(raw_data(instanceTransforms0), i32(instances * size_of(f16)), false)
-  // instancesVboId := rlgl.LoadVertexBuffer(raw_data(instanceTransforms), i32(size_of(instanceTransforms)), false)
-  instancesVboId := rlgl.LoadVertexBuffer(raw_data(instanceTransforms0), i32(size_of(instanceTransforms0)), false)
+  // instancesVboId := rlgl.LoadVertexBuffer(cast (rawptr) &instanceTransforms, cast (i32) instances * size_of(RL_Flat4x4Matrix), false)
+  instancesVboId := rlgl.LoadVertexBuffer(&instanceTransforms[0], cast (i32) instances * size_of(RL_Flat4x4Matrix), false)
 
-  // Instances transformation matrices are send to shader attribute location: SLI.MATRIX_MODEL
-  for i in  0..<i32(4) {
+  // Instances transformation matrices are sent to shader attribute location: SLI.MATRIX_MODEL
+  for i in 0..<i32(4) {
     rlgl.EnableVertexAttribute(u32(material.shader.locs[SLI.MATRIX_MODEL] + i))
     // I was using i * size_of(rl.Vector4) for the pointer
-    rlgl.SetVertexAttribute(u32(material.shader.locs[SLI.MATRIX_MODEL] + i), 4, rlgl.FLOAT, false, size_of(rl.Matrix), rawptr(uintptr(i * size_of(rl.Vector4))))
+    offset := i * size_of(rl.Vector4)
+    rlgl.SetVertexAttribute(
+      index = u32(material.shader.locs[SLI.MATRIX_MODEL] + i),
+      compSize = 4,
+      type = rlgl.FLOAT,
+      normalized = false,
+      stride = size_of(rl.Matrix),
+      pointer = &offset,
+    )
     rlgl.SetVertexAttributeDivisor(u32(material.shader.locs[SLI.MATRIX_MODEL] + i), 1)
   }
 
@@ -173,11 +180,17 @@ draw_mesh_instanced :: proc(mesh: rl.Mesh, material: rl.Material, transforms: []
   // Upload model normal matrix (if locations available)
   if material.shader.locs[SLI.MATRIX_NORMAL] != -1 {
     // println("Upload model normal matrix (if locations available)")
-    rlgl.SetUniformMatrix(material.shader.locs[SLI.MATRIX_NORMAL], rl.MatrixTranspose(rl.MatrixInvert(matModel)))
+    rlgl.SetUniformMatrix(
+      material.shader.locs[SLI.MATRIX_NORMAL], 
+      rl.MatrixTranspose(rl.MatrixInvert(matModel)),
+    )
   }
   //-----------------------------------------------------
-
+  
+  // intBuffer := (cast ([^]i32) rl.MemAlloc(size_of(i32)))
+  // defer rl.MemFree(intBuffer)
   // Bind active texture maps (if available)
+  value: i32
   for i in 0..<MAX_MATERIAL_MAPS {
     if (material.maps[i].texture.id > 0) {
       // Select current shader texture slot
@@ -191,24 +204,18 @@ draw_mesh_instanced :: proc(mesh: rl.Mesh, material: rl.Material, transforms: []
         rlgl.EnableTexture(material.maps[i].texture.id)
         // println("Enable Texture", i)
       }
-      value := [1]int{ i }
-      // value := [1]i32{ i32(i) }
-      // value := [1]u32{ u32(i) }
-      // value := [1]uintptr{ uintptr(i) }
-      // value := [1]rawptr{ rawptr(uintptr(i)) }
-      rlgl.SetUniform(material.shader.locs[SLI.MAP_ALBEDO + SLI(i)], raw_data(value[:]), i32(SUDT.INT), 1)
-      // rlgl.SetUniform(material.shader.locs[SLI.MAP_ALBEDO + SLI(i)], ZeroPtr, i32(SUDT.INT), 1) // Nope
-      // rlgl.SetUniform(material.shader.locs[SLI.MAP_ALBEDO + SLI(i)], rawptr(uintptr(i)), i32(SUDT.INT), 1)
-      // gl.Uniform1iv(material.shader.locs[SLI.MAP_ALBEDO + SLI(i)], 1, raw_data([]i32{ transmute(i32) int(i) }))
-      // gl.Uniform1i(material.shader.locs[SLI.MAP_ALBEDO + SLI(i)], cast(i32) i )
-      // println("Set Uniform for Texture", i, material.shader.locs[SLI.MAP_ALBEDO + SLI(i)])
+      // println("material.shader.locs[SLI.MAP_ALBEDO + SLI(i)] = {}", material.shader.locs[SLI.MAP_ALBEDO + SLI(i)])
+      
+      // This ... should ... work ...
+      value = i32(i)
+      rlgl.SetUniform(material.shader.locs[SLI.MAP_ALBEDO + SLI(i)], &value, i32(SUDT.INT), 1)
     }
   }
 
   // Try binding vertex array objects (VAO)
   // or use VBOs if not possible
   if !rlgl.EnableVertexArray(mesh.vaoId) {
-    println("!rlgl.EnableVertexArray(mesh.vaoId)")
+    // println("!rlgl.EnableVertexArray(mesh.vaoId)")
     // Bind mesh VBO data: vertex position (shader-location = 0)
     rlgl.EnableVertexBuffer(mesh.vboId[0])
     rlgl.SetVertexAttribute(u32(material.shader.locs[SLI.VERTEX_POSITION]), 3, rlgl.FLOAT, false, 0, ZeroPtr)
