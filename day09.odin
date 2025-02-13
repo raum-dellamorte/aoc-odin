@@ -10,7 +10,7 @@ import rl "vendor:raylib"
 // import rlgl "vendor:raylib/rlgl"
 
 day09 :: proc() {
-  // { // This block is just solving the problem like one of those dreary ppl you meet at Bingo
+  // {
   //   println("Day 09: Rope Bridge\n")
   //   input_file := #load("day09-input", string)
   //   movements := strings.split(strings.trim_space(input_file), "\n")
@@ -46,13 +46,18 @@ day09 :: proc() {
   {
     // Constants
     WIN: rl.Vector2 = {1280, 720}
+    // RLNK : rl.Vector2 = { 50, 50 }
+    RLNK: rl.Vector3 = {1, 1, 1}
     SPEED: f32 = 40
     ROPE_SPEED: f32 = 10
     
     // Init Window BEFORE other Raylib operations like importing models and shaders
     rl.InitWindow(i32(WIN.x), i32(WIN.y), "Day 09: Rope Bridge")
-    
+    defer rl.CloseWindow()
+    // Now we can proceed.
     player_pos: rl.Vector3 = {0, 0, 0}
+    // offset : rl.Vector2 = { 0, 0 }
+    // win_offset : rl.Vector2 = WIN / 2.0
     dist_player: f32 = 0
     
     // These are the unicode characters I used in the Rust/WASM version
@@ -174,8 +179,6 @@ day09 :: proc() {
     
     // Load Models
     player := rl.LoadModel("cube-1x1x1.obj")
-    _ = player // because reasons
-    // player_tex_bak := cube.materials[0].maps[MMI.ALBEDO].texture // Backup included Texture for no reason
     cube := rl.LoadModel("cube-tex-atlas.obj")
     
     // Material Assignments
@@ -189,9 +192,8 @@ day09 :: proc() {
       textures[:],
       colors,
     )
-    defer delete_mat_helper(cube_mat_helper)
-    
     cube.materials = cube_mat_helper.pointer
+    defer delete_mat_helper(cube_mat_helper)
     
     // Camera
     camera := rl.Camera3D {
@@ -208,14 +210,13 @@ day09 :: proc() {
       camera.target.y = target^.y
     }
     
+    // Main Loop vars
     inst_num := 0
     loop_state := 0
     dist_current := 0
     mov_line := movements[0]
-    
-    // printf("{}",)
-    
     frametime: f32 = f32(1.0 / 60.0)
+    
     for !rl.WindowShouldClose() {
       frametime = rl.GetFrameTime()
       dist_player = frametime * SPEED
@@ -233,7 +234,6 @@ day09 :: proc() {
         dist_current = dist
         loop_state += 1
       }
-      
       // Move "Player"
       if rl.IsKeyDown(.W) || rl.IsKeyDown(.UP) {player_pos.y += dist_player}
       if rl.IsKeyDown(.S) || rl.IsKeyDown(.DOWN) {player_pos.y -= dist_player}
@@ -241,13 +241,10 @@ day09 :: proc() {
       if rl.IsKeyDown(.D) || rl.IsKeyDown(.RIGHT) {player_pos.x += dist_player}
       // offset = (WIN / 2.0) - (RLNK / 2.0) + player_pos
       move_cam(&camera, &player_pos)
-      
+      // Draw Phase
       rl.BeginDrawing()
       rl.ClearBackground(rl.BLUE)
       rl.BeginMode3D(camera)
-      // rlgl.PushMatrix()  // I don't yet understand this, just trying it
-      
-      // view_mat := rl.GetCameraMatrix(camera)
       
       if loop_state == 1 {
         // animate rope pieces moving
@@ -321,7 +318,6 @@ day09 :: proc() {
           raw_data(visited_mat4),
           i32(len(visited_mat4)),
         )
-        // Swapping the above for the below still compiles but renders nothing.
         // draw_mesh_instanced(cube.meshes[0], cube.materials[1], &visited_mat4)
         rl.EndShaderMode()
         
@@ -391,8 +387,6 @@ day09 :: proc() {
       rl.EndMode3D()
       rl.EndDrawing()
     }
-    
-    rl.CloseWindow()
   }
 }
 
@@ -406,7 +400,6 @@ Moves :: enum {
 }
 
 get_mov :: proc(mov: string) -> (Moves, int) {
-  // using Moves
   tmp := strings.split(mov, " ")
   if len(tmp) == 2 {
     dist, ok := parse_int(tmp[1])
@@ -454,7 +447,6 @@ move_rope :: proc(rope: ^[10]RopeLink, mov: Moves, dist: int) {
   dist := dist
   head := &rope[0]
   
-  // using Moves
   switch mov {
   case .ErrDir, .ErrDist:
     println("Move instruction passed to move_rope is invalid:", mov)
