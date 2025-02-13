@@ -312,13 +312,13 @@ day09 :: proc() {
           i32(len(visited_tex_offset)),
         )
         rl.BeginShaderMode(rope_trail_shader)
-        rl.DrawMeshInstanced( // This is the official DrawMeshInstanced that I want to rewrite in Odin
-          cube.meshes[0],
-          cube.materials[1],
-          raw_data(visited_mat4),
-          i32(len(visited_mat4)),
-        )
-        // draw_mesh_instanced(cube.meshes[0], cube.materials[1], &visited_mat4)
+        // rl.DrawMeshInstanced(
+        //   cube.meshes[0],
+        //   cube.materials[1],
+        //   raw_data(visited_mat4),
+        //   i32(len(visited_mat4)),
+        // )
+        draw_mesh_instanced(cube.meshes[0], cube.materials[1], &visited_mat4)
         rl.EndShaderMode()
         
         for i := 9; i >= 0; i -= 1 {
