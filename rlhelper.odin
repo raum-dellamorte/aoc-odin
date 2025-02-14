@@ -1,7 +1,7 @@
 package aoc2022
 
-// import "base:runtime" // for print in "c" or "contextless"
-// import "core:math/linalg" // temp for debugging
+import "core:log"
+import math "core:math/linalg"
 // import "core:os"
 // import "core:slice"
 // import "core:strings"
@@ -96,7 +96,6 @@ draw_mesh_instanced :: proc (mesh: rl.Mesh, material: rl.Material, transforms: ^
   
   // Upload to shader material.colSpecular (if location available)
   if material.shader.locs[SLI.COLOR_SPECULAR] != -1 {
-    println("COLOR_SPECULAR set uniform")
     values: [4]f32 = {
       f32(material.maps[SLI.COLOR_SPECULAR].color.r),
       f32(material.maps[SLI.COLOR_SPECULAR].color.g),
@@ -141,7 +140,7 @@ draw_mesh_instanced :: proc (mesh: rl.Mesh, material: rl.Material, transforms: ^
   
   // Fill buffer with instances transformations as float16 arrays
   for i in 0..<instances {
-    instanceTransforms[i] = transmute ([16]f32) rl.MatrixTranspose(transforms[i])
+    instanceTransforms[i] = transmute ([16]f32) math.transpose(transforms[i])
   }
   
   // Enable mesh VAO to attach new buffer
@@ -176,7 +175,7 @@ draw_mesh_instanced :: proc (mesh: rl.Mesh, material: rl.Material, transforms: ^
   // Accumulate internal matrix transform (push/pop) and view matrix
   // NOTE: In this case, model instance transformation must be computed in the shader
   // matModelView = rlgl.GetMatrixTransform() * matView
-  matModelView = rlhMatrixMultiply(rlgl.GetMatrixTransform(),matView)
+  matModelView = transmatmult(rlgl.GetMatrixTransform(),matView)
   
   // Upload model normal matrix (if locations available)
   if material.shader.locs[SLI.MATRIX_NORMAL] != -1 {
@@ -204,7 +203,7 @@ draw_mesh_instanced :: proc (mesh: rl.Mesh, material: rl.Material, transforms: ^
       rlgl.SetUniform(material.shader.locs[SLI.MAP_ALBEDO + SLI(i)], &value, i32(SUDT.INT), 1)
     }
   }
-  
+
   // Try binding vertex array objects (VAO)
   // or use VBOs if not possible
   if !rlgl.EnableVertexArray(mesh.vaoId) {
@@ -253,7 +252,7 @@ draw_mesh_instanced :: proc (mesh: rl.Mesh, material: rl.Material, transforms: ^
       rlgl.SetVertexAttribute(u32(material.shader.locs[SLI.VERTEX_TEXCOORD02]), 2, rlgl.FLOAT, false, 0, 0)
       rlgl.EnableVertexAttribute(u32(material.shader.locs[SLI.VERTEX_TEXCOORD02]))
     }
-    
+  
     if mesh.indices != ZeroPtr { rlgl.EnableVertexBufferElement(mesh.vboId[6]) }
   }
   
@@ -265,13 +264,13 @@ draw_mesh_instanced :: proc (mesh: rl.Mesh, material: rl.Material, transforms: ^
     matModelViewProjection := rl.Matrix(1)
     if eyeCount == 1 {
       // matModelViewProjection = matModelView * matProjection // This doesn't work
-      matModelViewProjection = rlhMatrixMultiply(matModelView, matProjection)
+      matModelViewProjection = transmatmult(matModelView, matProjection)
     } else {
       // Setup current eye viewport (half screen width)
       rlgl.Viewport(eye * rlgl.GetFramebufferWidth() / 2, 0, rlgl.GetFramebufferWidth() / 2, rlgl.GetFramebufferHeight())
-      matModelViewProjection = rlhMatrixMultiply(
-        rl.MatrixTranspose(rlhMatrixMultiply(matModelView, rlgl.GetMatrixViewOffsetStereo(eye))),
-        rlgl.GetMatrixProjectionStereo(eye)
+      matModelViewProjection = transmatmult(
+        rl.MatrixTranspose(transmatmult(matModelView, rlgl.GetMatrixViewOffsetStereo(eye))),
+        rlgl.GetMatrixProjectionStereo(eye),
       )
     }
     
@@ -282,17 +281,16 @@ draw_mesh_instanced :: proc (mesh: rl.Mesh, material: rl.Material, transforms: ^
     if mesh.indices != ZeroPtr {
       rlgl.DrawVertexArrayElementsInstanced(0, mesh.triangleCount * 3, ZeroPtr, i32(instances))
     } else {
-      rlgl.DrawVertexArrayInstanced(0, mesh.vertexCount, i32(instances))
+      rlgl.DrawVertexArrayInstanced(0, mesh.vertexCount, i32(instances)) // We call this one.
     }
   }
-  
+
   // Unbind all bound texture maps
   for i in 0..<MAX_MATERIAL_MAPS {
     if material.maps[i].texture.id > 0 {
       // Select current shader texture slot
       rlgl.ActiveTextureSlot( i32(i) )
       
-      // Disable texture for active slot
       #partial switch cast(MMI) i {
       case .IRRADIANCE, .PREFILTER, .CUBEMAP:
         rlgl.DisableTextureCubemap()
@@ -301,7 +299,7 @@ draw_mesh_instanced :: proc (mesh: rl.Mesh, material: rl.Material, transforms: ^
       }
     }
   }
-  
+
   // Disable all possible vertex array objects (or VBOs)
   rlgl.DisableVertexArray()
   rlgl.DisableVertexBuffer()
@@ -323,45 +321,62 @@ draw_mesh_instanced :: proc (mesh: rl.Mesh, material: rl.Material, transforms: ^
 //   }
 // }
 
-rlhMatrixToFloatV :: proc(mat: #row_major matrix[4,4]f32) -> RL_Flat4x4Matrix {
-  out : [16]f32
-  out[0]  = mat[0,0]
-  out[1]  = mat[1,0]
-  out[2]  = mat[2,0]
-  out[3]  = mat[3,0]
-  out[4]  = mat[0,1]
-  out[5]  = mat[1,1]
-  out[6]  = mat[2,1]
-  out[7]  = mat[3,1]
-  out[8]  = mat[0,2]
-  out[9]  = mat[1,2]
-  out[10] = mat[2,2]
-  out[11] = mat[3,2]
-  out[12] = mat[0,3]
-  out[13] = mat[1,3]
-  out[14] = mat[2,3]
-  out[15] = mat[3,3]
-  return out
-}
+// // This is not needed. transmute ([16]f32) rl.MatrixTranspose(row_major_matrix) is equivalent.
+// rlhMatrixToFloatV :: proc(mat: #row_major matrix[4,4]f32) -> RL_Flat4x4Matrix {
+//   out : [16]f32
+//   out[0]  = mat[0,0]
+//   out[1]  = mat[1,0]
+//   out[2]  = mat[2,0]
+//   out[3]  = mat[3,0]
+//   out[4]  = mat[0,1]
+//   out[5]  = mat[1,1]
+//   out[6]  = mat[2,1]
+//   out[7]  = mat[3,1]
+//   out[8]  = mat[0,2]
+//   out[9]  = mat[1,2]
+//   out[10] = mat[2,2]
+//   out[11] = mat[3,2]
+//   out[12] = mat[0,3]
+//   out[13] = mat[1,3]
+//   out[14] = mat[2,3]
+//   out[15] = mat[3,3]
+//   return out
+// }
 
-rlhMatrixMultiply :: proc(left, right: #row_major matrix[4,4]f32) -> #row_major matrix[4,4]f32 {
+transmatmult :: proc(left, right: #row_major matrix[4,4]f32) -> #row_major matrix[4,4]f32 {
   result : #row_major matrix[4,4]f32
   
+  // result.m0 = left.m0*right.m0 + left.m1*right.m4 + left.m2*right.m8 + left.m3*right.m12;
   result[0,0] = left[0,0]*right[0,0] + left[1,0]*right[0,1] + left[2,0]*right[0,2] + left[3,0]*right[0,3]
+  // result.m1 = left.m0*right.m1 + left.m1*right.m5 + left.m2*right.m9 + left.m3*right.m13;
   result[1,0] = left[0,0]*right[1,0] + left[1,0]*right[1,1] + left[2,0]*right[1,2] + left[3,0]*right[1,3]
+  // result.m2 = left.m0*right.m2 + left.m1*right.m6 + left.m2*right.m10 + left.m3*right.m14;
   result[2,0] = left[0,0]*right[2,0] + left[1,0]*right[2,1] + left[2,0]*right[2,2] + left[3,0]*right[2,3]
+  // result.m3 = left.m0*right.m3 + left.m1*right.m7 + left.m2*right.m11 + left.m3*right.m15;
   result[3,0] = left[0,0]*right[3,0] + left[1,0]*right[3,1] + left[2,0]*right[3,2] + left[3,0]*right[3,3]
+  // result.m4 = left.m4*right.m0 + left.m5*right.m4 + left.m6*right.m8 + left.m7*right.m12;
   result[0,1] = left[0,1]*right[0,0] + left[1,1]*right[0,1] + left[2,1]*right[0,2] + left[3,1]*right[0,3]
+  // result.m5 = left.m4*right.m1 + left.m5*right.m5 + left.m6*right.m9 + left.m7*right.m13;
   result[1,1] = left[0,1]*right[1,0] + left[1,1]*right[1,1] + left[2,1]*right[1,2] + left[3,1]*right[1,3]
+  // result.m6 = left.m4*right.m2 + left.m5*right.m6 + left.m6*right.m10 + left.m7*right.m14;
   result[2,1] = left[0,1]*right[2,0] + left[1,1]*right[2,1] + left[2,1]*right[2,2] + left[3,1]*right[2,3]
+  // result.m7 = left.m4*right.m3 + left.m5*right.m7 + left.m6*right.m11 + left.m7*right.m15;
   result[3,1] = left[0,1]*right[3,0] + left[1,1]*right[3,1] + left[2,1]*right[3,2] + left[3,1]*right[3,3]
+  // result.m8 = left.m8*right.m0 + left.m9*right.m4 + left.m10*right.m8 + left.m11*right.m12;
   result[0,2] = left[0,2]*right[0,0] + left[1,2]*right[0,1] + left[2,2]*right[0,2] + left[3,2]*right[0,3]
+  // result.m9 = left.m8*right.m1 + left.m9*right.m5 + left.m10*right.m9 + left.m11*right.m13;
   result[1,2] = left[0,2]*right[1,0] + left[1,2]*right[1,1] + left[2,2]*right[1,2] + left[3,2]*right[1,3]
+  // result.m10 = left.m8*right.m2 + left.m9*right.m6 + left.m10*right.m10 + left.m11*right.m14;
   result[2,2] = left[0,2]*right[2,0] + left[1,2]*right[2,1] + left[2,2]*right[2,2] + left[3,2]*right[2,3]
+  // result.m11 = left.m8*right.m3 + left.m9*right.m7 + left.m10*right.m11 + left.m11*right.m15;
   result[3,2] = left[0,2]*right[3,0] + left[1,2]*right[3,1] + left[2,2]*right[3,2] + left[3,2]*right[3,3]
+  // result.m12 = left.m12*right.m0 + left.m13*right.m4 + left.m14*right.m8 + left.m15*right.m12;
   result[0,3] = left[0,3]*right[0,0] + left[1,3]*right[0,1] + left[2,3]*right[0,2] + left[3,3]*right[0,3]
+  // result.m13 = left.m12*right.m1 + left.m13*right.m5 + left.m14*right.m9 + left.m15*right.m13;
   result[1,3] = left[0,3]*right[1,0] + left[1,3]*right[1,1] + left[2,3]*right[1,2] + left[3,3]*right[1,3]
+  // result.m14 = left.m12*right.m2 + left.m13*right.m6 + left.m14*right.m10 + left.m15*right.m14;
   result[2,3] = left[0,3]*right[2,0] + left[1,3]*right[2,1] + left[2,3]*right[2,2] + left[3,3]*right[2,3]
+  // result.m15 = left.m12*right.m3 + left.m13*right.m7 + left.m14*right.m11 + left.m15*right.m15;
   result[3,3] = left[0,3]*right[3,0] + left[1,3]*right[3,1] + left[2,3]*right[3,2] + left[3,3]*right[3,3]
   
   return result
@@ -372,42 +387,57 @@ rlhMatrixMultiply :: proc(left, right: #row_major matrix[4,4]f32) -> #row_major 
 // From raymath.h: "In memory order, row0 is [m0 m4 m8 m12] but in semantic math row0 is [m0 m1 m2 m3]"
 // draw_mesh_instanced now works using Raylib's MatrixMultiply ported to the Odin version above.
 import "core:testing"
-import oi "base:intrinsics"
+import "base:intrinsics"
+rm_mat1 :: #row_major matrix[4,4]f32 {
+   2., 3., 5., 7.,
+  11.,13.,17.,19.,
+  23.,29.,31.,37.,
+  41.,43.,47.,53.,
+}
+cm_mat1 :: matrix[4,4]f32 {
+   2., 3., 5., 7.,
+  11.,13.,17.,19.,
+  23.,29.,31.,37.,
+  41.,43.,47.,53.,
+}
+rm_mat2 :: #row_major matrix[4,4]f32 {
+   .2, .3, .5, .7,
+  .11,.13,.17,.19,
+  .23,.29,.31,.37,
+  .41,.43,.47,.53,
+}
+cm_mat2 :: matrix[4,4]f32 {
+   .2, .3, .5, .7,
+  .11,.13,.17,.19,
+  .23,.29,.31,.37,
+  .41,.43,.47,.53,
+}
 @(test)
-test_rlhMatrixMultiply :: proc(^testing.T) {
+tests :: proc(^testing.T) {
   ident := rl.Matrix(1)
+  log.info("Test")
+  rlhm := transmatmult(rm_mat1, rm_mat2)
+  cm_mul_odin := cm_mat1 * cm_mat2
+  rm_mul_odin := rm_mat1 * rm_mat2
+  cm_tpose_mul_odin := math.transpose(math.transpose(cm_mat1) * math.transpose(cm_mat2))
+  rm_tpose_mul_odin := math.transpose(math.transpose(rm_mat1) * math.transpose(rm_mat2))
   assert(ident * ident == ident)
-  assert(rlhMatrixMultiply(ident,ident) == ident)
-  rm_mat1 := #row_major matrix[4,4]f32 {
-     2., 3., 5., 7.,
-    11.,13.,17.,19.,
-    23.,29.,31.,37.,
-    41.,43.,47.,53.,
-  }
-  cm_mat1 := matrix[4,4]f32 {
-     2., 3., 5., 7.,
-    11.,13.,17.,19.,
-    23.,29.,31.,37.,
-    41.,43.,47.,53.,
-  }
-  rm_mat2 := #row_major matrix[4,4]f32 {
-     .2, .3, .5, .7,
-    .11,.13,.17,.19,
-    .23,.29,.31,.37,
-    .41,.43,.47,.53,
-  }
-  cm_mat2 := matrix[4,4]f32 {
-     .2, .3, .5, .7,
-    .11,.13,.17,.19,
-    .23,.29,.31,.37,
-    .41,.43,.47,.53,
-  }
-  assert(rm_mat1 * rm_mat2 != rlhMatrixMultiply(rm_mat1, rm_mat2))
-  assert(transmute (#row_major matrix[4,4]f32) (cm_mat1 * cm_mat2) != rlhMatrixMultiply(rm_mat1, rm_mat2))
-  assert(cast (#row_major matrix[4,4]f32) (cm_mat1 * cm_mat2) != rl.MatrixTranspose(rlhMatrixMultiply(rm_mat1, rm_mat2)))
-  assert(rl.MatrixTranspose(rm_mat1 * rm_mat2) != rlhMatrixMultiply(rm_mat1, rm_mat2))
-  assert(rl.MatrixTranspose(rm_mat1) * rl.MatrixTranspose(rm_mat2) != rlhMatrixMultiply(rm_mat1, rm_mat2))
-  assert(rlhMatrixToFloatV(rm_mat1) != oi.matrix_flatten(rm_mat1))
-  assert((transmute ([16]f32) rl.MatrixTranspose(rm_mat1)) == rlhMatrixToFloatV(rm_mat1))
+  assert(transmatmult(ident,ident) == ident)
+  assert(transmatmult(rm_mat1,ident) == rm_mat1)
+  assert(rlhm != rm_mul_odin)
+  assert(rm_tpose_mul_odin == rlhm) // We did it!
+  assert(cast (#row_major matrix[4,4]f32) (cm_mat1 * cm_mat2) != rlhm)
+  assert(transmute (#row_major matrix[4,4]f32) (transmute (matrix[4,4]f32) rm_mat1 * transmute (matrix[4,4]f32) rm_mat2) != rlhm)
+  assert(transmute (#row_major matrix[4,4]f32) (cast (matrix[4,4]f32) rm_mat1 * cast (matrix[4,4]f32) rm_mat2) != rlhm)
+  assert(cast (#row_major matrix[4,4]f32) (cm_mat1 * cm_mat2) != rl.MatrixTranspose(rlhm))
+  assert(rl.MatrixTranspose(rm_mat1 * rm_mat2) != transmatmult(rm_mat1, rm_mat2))
+  assert(rl.MatrixTranspose(rm_mat1) * rl.MatrixTranspose(rm_mat2) != transmatmult(rm_mat1, rm_mat2))
+  // assert(rlhMatrixToFloatV(rm_mat1) != matrix_flatten(rm_mat1))
+  // assert((transmute ([16]f32) rl.MatrixTranspose(rm_mat1)) == rlhMatrixToFloatV(rm_mat1))
+  log.info("transmatmult(rm_mat1, rm_mat2)",rlhm)
+  log.info("native col major:",cm_mul_odin)
+  log.info("native col major transpose(transpose(mat) * transpose(mat)):",cm_tpose_mul_odin)
+  log.info("native row major transpose(transpose(mat) * transpose(mat)):",rm_tpose_mul_odin)
+  log.info("native row major:",rm_mul_odin)
 }
 

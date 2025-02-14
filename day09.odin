@@ -47,7 +47,7 @@ day09 :: proc() {
     // Constants
     WIN: rl.Vector2 = {1280, 720}
     // RLNK : rl.Vector2 = { 50, 50 }
-    RLNK: rl.Vector3 = {1, 1, 1}
+    // RLNK: rl.Vector3 = {1, 1, 1}
     SPEED: f32 = 40
     ROPE_SPEED: f32 = 10
     
@@ -178,7 +178,7 @@ day09 :: proc() {
     colors: []rl.Color = {rl.WHITE}
     
     // Load Models
-    player := rl.LoadModel("cube-1x1x1.obj")
+    _ = rl.LoadModel("cube-1x1x1.obj")
     cube := rl.LoadModel("cube-tex-atlas.obj")
     
     // Material Assignments
@@ -382,8 +382,6 @@ day09 :: proc() {
         rl.Matrix(linalg.matrix4_translate_f32(player_pos)),
       )
       rl.EndShaderMode()
-      
-      // rlgl.PopMatrix() // Pushing after Begin and Popping before End, makes sense? Must read docs ... which are for C, slight differences...
       rl.EndMode3D()
       rl.EndDrawing()
     }
