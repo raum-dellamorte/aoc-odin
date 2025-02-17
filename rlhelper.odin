@@ -264,7 +264,7 @@ draw_mesh_instanced :: proc (mesh: rl.Mesh, material: rl.Material, transforms: ^
     matModelViewProjection := rl.Matrix(1)
     if eyeCount == 1 {
       // matModelViewProjection = matModelView * matProjection // This doesn't work
-      matModelViewProjection = transmatmult(matModelView, matProjection)
+      matModelViewProjection = matProjection * matModelView
     } else {
       // Setup current eye viewport (half screen width)
       rlgl.Viewport(eye * rlgl.GetFramebufferWidth() / 2, 0, rlgl.GetFramebufferWidth() / 2, rlgl.GetFramebufferHeight())
