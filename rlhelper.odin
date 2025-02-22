@@ -175,13 +175,16 @@ draw_mesh_instanced :: proc (mesh: rl.Mesh, material: rl.Material, transforms: ^
   // Accumulate internal matrix transform (push/pop) and view matrix
   // NOTE: In this case, model instance transformation must be computed in the shader
   // matModelView = rlgl.GetMatrixTransform() * matView
-  matModelView = transmatmult(rlgl.GetMatrixTransform(),matView)
+  matModelView = matView * rlgl.GetMatrixTransform() // So far this doesn't seem to matter which way, probably one or both are Identity
   
   // Upload model normal matrix (if locations available)
   if material.shader.locs[SLI.MATRIX_NORMAL] != -1 {
     rlgl.SetUniformMatrix(
       material.shader.locs[SLI.MATRIX_NORMAL], 
-      rl.MatrixTranspose(rl.MatrixInvert(matModel)),
+      // rl.MatrixTranspose(rl.MatrixInvert(matModel)), // Same order as the C
+      matModel, // this might make a difference if not a cube...
+      // math.transpose(matModel),
+      // rl.MatrixInvert(math.transpose(matModel)),
     )
   }
   //-----------------------------------------------------
@@ -268,10 +271,8 @@ draw_mesh_instanced :: proc (mesh: rl.Mesh, material: rl.Material, transforms: ^
     } else {
       // Setup current eye viewport (half screen width)
       rlgl.Viewport(eye * rlgl.GetFramebufferWidth() / 2, 0, rlgl.GetFramebufferWidth() / 2, rlgl.GetFramebufferHeight())
-      matModelViewProjection = transmatmult(
-        rl.MatrixTranspose(transmatmult(matModelView, rlgl.GetMatrixViewOffsetStereo(eye))),
-        rlgl.GetMatrixProjectionStereo(eye),
-      )
+      matModelViewProjection = rlgl.GetMatrixProjectionStereo(eye) * // no idea if this works
+        (rlgl.GetMatrixViewOffsetStereo(eye) * matModelView)
     }
     
     // Send combined model-view-projection matrix to shader
