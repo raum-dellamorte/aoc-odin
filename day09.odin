@@ -209,6 +209,9 @@ day09 :: proc() {
       camera.target.x = target^.x
       camera.target.y = target^.y
     }
+    zoom_cam :: proc(camera: ^rl.Camera3D, dist: f32) {
+      camera.position.z += dist
+    }
     
     // Main Loop vars
     inst_num := 0
@@ -239,6 +242,8 @@ day09 :: proc() {
       if rl.IsKeyDown(.S) || rl.IsKeyDown(.DOWN) {player_pos.y -= dist_player}
       if rl.IsKeyDown(.A) || rl.IsKeyDown(.LEFT) {player_pos.x -= dist_player}
       if rl.IsKeyDown(.D) || rl.IsKeyDown(.RIGHT) {player_pos.x += dist_player}
+      if rl.IsKeyDown(.R) { zoom_cam(&camera, -0.02) }
+      if rl.IsKeyDown(.F) { zoom_cam(&camera, 0.02) }
       // offset = (WIN / 2.0) - (RLNK / 2.0) + player_pos
       move_cam(&camera, &player_pos)
       // Draw Phase
@@ -263,12 +268,12 @@ day09 :: proc() {
         for pnt in rope[1].visited {
           x := f32(pnt.x)
           y := f32(pnt.y)
-          if x > boundL && x < boundR && y < boundU && y > boundD {
+          // if x > boundL && x < boundR && y < boundU && y > boundD {
             append_soa(
               &visited_draw,
               DrawMeSOA{pnt, DrawMe.First, rl.Vector3{x, y, 0}},
             )
-          }
+          // }
         }
         for pnt in rope[9].visited {
           x := f32(pnt.x)
@@ -372,6 +377,19 @@ day09 :: proc() {
         } else {
           loop_state = 3
         }
+      }
+      if loop_state == 3 {
+        // Draw the dots after we're finished
+        rl.SetShaderValueV(
+          rope_trail_shader,
+          rope_trail_shader_yOffset,
+          raw_data(visited_tex_offset),
+          SUDT.FLOAT,
+          i32(len(visited_tex_offset)),
+        )
+        rl.BeginShaderMode(rope_trail_shader)
+        draw_mesh_instanced(cube.meshes[0], cube.materials[1], &visited_mat4)
+        rl.EndShaderMode()
       }
       
       rl.BeginShaderMode(player_shader)
